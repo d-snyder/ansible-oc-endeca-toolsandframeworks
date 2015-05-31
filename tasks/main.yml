@@ -1,0 +1,75 @@
+---
+#
+# This role should be run with sudo=yes sudo_user={{ endeca_user }}.
+#
+
+#
+# Tools and Frameworks
+#
+
+- set_fact:
+    toolsandframeworks_archive: "V46389-01.zip"
+    toolsandframeworks_install: "cd/Disk1/install"
+    tmpdir: /tmp
+
+- name: expand toolsandframeworks archive
+  unarchive:
+  args: 
+    src: "{{ toolsandframeworks_archive }}"
+    dest: "{{ tmpdir }}"
+    creates: "{{ tmpdir }}/{{ toolsandframeworks_install }}"
+
+- name: create inventory directory for oracle universal installer
+  file:
+  args:
+    state: directory
+    path: "/u01/app/oraInventory"
+    owner: oracle
+    group: dba
+    mode: 0755
+  sudo: yes
+  sudo_user: root
+
+- name: Install Tools and Frameworks
+  command: "{{ tmpdir }}/{{ toolsandframeworks_install }}/silent_install.sh {{ tmpdir }}/{{ toolsandframeworks_install }}/silent_response.rsp ToolsAndFrameworks {{ endeca_root }}/ToolsAndFrameworks {{ endeca_admin_password }}"
+  args:
+    creates: "{{ endeca_root }}/ToolsAndFrameworks"
+
+- name: ensure pid gets created in correct place
+  lineinfile: 
+    create=yes
+    mode=0755
+    dest={{ endeca_root }}/ToolsAndFrameworks/{{ endeca_toolsandframeworks_version }}/server/apache-tomcat-7.0.42/bin/setenv.sh
+    regexp="CATALINA_PID=.*"
+    line="CATALINA_PID={{ pid_dir }}/{{ endeca_toolsandframeworks_service }}.pid"
+
+# Disabling for now. Appears to allow login via the sso server but breaks back-end things like initialize-services. Need to figure out why.
+#- name: setup for sso
+#  lineinfile:
+#    dest="{{ endeca_root }}/ToolsAndFrameworks/{{ endeca_toolsandframeworks_version }}/server/workspace/conf/webstudio.properties"
+#    regexp="{{ item.name }}="
+#    insertafter="Commerce SSO Authentication"
+#    line="{{ item.name }}={{ item.value }}"
+#  with_items:
+#    - { name: "com.endeca.webstudio.useSSO", value: "true" }
+#    - { name: "com.endeca.webstudio.sso.loginURL", value: "http://localhost:28840/sso/login" }
+#    - { name: "com.endeca.webstudio.sso.controlURL", value: "http://localhost:28840/sso/control" }
+#    - { name: "com.endeca.webstudio.sso.logoutURL", value: "http://localhost:28840/sso/logout" }
+#    - { name: "com.endeca.webstudio.sso.validationURL", value: "http://localhost:28840/sso/validate" }
+#    - { name: "com.endeca.webstudio.sso.keepAliveURL", value: "http://localhost:28840/sso/keepAlive" }
+#    - { name: "com.endeca.webstudio.sso.keepAliveFrequency", value: "1800" }
+
+# /app/oracle/product/endeca/ToolsAndFrameworks/11.1.0/credential_store/bin/manage_credentials.sh add --key ifcr --user admin --type password
+
+- name: create endecatools init script
+  template: 
+    src="toolsandframeworks_init.j2" 
+    dest="/etc/init.d/{{ endeca_toolsandframeworks_service }}" 
+    mode=0755
+  sudo: yes
+  sudo_user: root
+
+- name: start service
+  service: name={{ endeca_toolsandframeworks_service }} enabled=yes state=started
+  sudo: yes
+  sudo_user: root
