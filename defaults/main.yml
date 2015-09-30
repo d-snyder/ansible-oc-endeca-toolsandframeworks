@@ -1,7 +1,5 @@
-endeca_root: /opt/endeca
-endeca_user: oracle
 endeca_admin_password: Admin123
-endeca_pid_dir: /var/run/endeca
+pid_dir: /var/run/endeca
 endeca_toolsandframeworks_version: 11.1.0
 endeca_mdex_version: 6.5.1
 endeca_toolsandframeworks_service: toolsandframeworks

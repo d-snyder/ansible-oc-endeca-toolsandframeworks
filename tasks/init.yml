@@ -1,0 +1,22 @@
+---
+- name: ensure pid gets created in correct place
+  lineinfile: 
+    create=yes
+    mode=0755
+    dest={{ endeca_root }}/ToolsAndFrameworks/{{ endeca_toolsandframeworks_version }}/server/apache-tomcat-7.0.42/bin/setenv.sh
+    regexp="CATALINA_PID=.*"
+    line="CATALINA_PID={{ pid_dir }}/{{ endeca_toolsandframeworks_service }}.pid"
+
+- name: create endecatools init script
+  template: 
+    src="toolsandframeworks_init.j2" 
+    dest="/etc/init.d/{{ endeca_toolsandframeworks_service }}" 
+    mode=0755
+  sudo: yes
+  sudo_user: root
+
+- name: start service
+  service: name={{ endeca_toolsandframeworks_service }} enabled=yes state=started
+  sudo: yes
+  sudo_user: root
+

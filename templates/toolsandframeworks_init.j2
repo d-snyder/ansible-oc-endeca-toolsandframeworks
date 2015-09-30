@@ -9,15 +9,15 @@
 # source function library
 . /etc/rc.d/init.d/functions
 
-PS_INI="{{ endeca_root }}/endeca/PlatformServices/workspace/setup/installer_sh.ini"
-MDEX_INI="{{ endeca_root }}/endeca/MDEX/{{ endeca_mdex_version }}/mdex_setup_sh.ini"
+PS_INI="{{ install_root }}/endeca/PlatformServices/workspace/setup/installer_sh.ini"
+MDEX_INI="{{ install_root }}/endeca/MDEX/{{ endeca_mdex_version }}/mdex_setup_sh.ini"
 source $PS_INI
 source $MDEX_INI
 
 SERVICE={{ endeca_toolsandframeworks_service }}
-USER={{ endeca_user }}
-START_BIN="{{ endeca_root }}/ToolsAndFrameworks/{{ endeca_toolsandframeworks_version }}/server/bin/startup.sh"
-STOP_BIN="{{ endeca_root }}/ToolsAndFrameworks/{{ endeca_toolsandframeworks_version }}/server/bin/shutdown.sh"
+USER={{ install_user }}
+START_BIN="{{ install_root }}/ToolsAndFrameworks/{{ endeca_toolsandframeworks_version }}/server/bin/startup.sh"
+STOP_BIN="{{ install_root }}/ToolsAndFrameworks/{{ endeca_toolsandframeworks_version }}/server/bin/shutdown.sh"
 PIDFILE="{{ pid_dir }}/$SERVICE.pid"
 LOCKFILE="/var/lock/subsys/$SERVICE"
 

@@ -1,23 +1,29 @@
 ---
 #
-# This role should be run with sudo=yes sudo_user={{ endeca_user }}.
-#
-
-#
-# Tools and Frameworks
+# Endeca Tools and Frameworks
+# This role should be run with sudo=yes sudo_user={{ install_user }}.
 #
 
 - set_fact:
-    toolsandframeworks_archive: "V46389-01.zip"
-    toolsandframeworks_install: "cd/Disk1/install"
-    tmpdir: /tmp
+    install_archive: "V46389-01.zip"
+    install_executable: "cd/Disk1/install"
+
+- name: temporary directory for install
+  register: mktemp
+  command: mktemp -d
+
+- name: download installation archive
+  get_url:
+  args:
+    url: "{{ install_archive_url }}"
+    dest: "{{ playbook_dir }}/{{ install_archive }}"
+  when: install_archive_url is defined
 
 - name: expand toolsandframeworks archive
-  unarchive:
-  args: 
-    src: "{{ toolsandframeworks_archive }}"
-    dest: "{{ tmpdir }}"
-    creates: "{{ tmpdir }}/{{ toolsandframeworks_install }}"
+  unarchive: 
+    src="{{ install_archive }}"
+    dest="{{ mktemp.stdout }}"
+    creates="{{ mktemp.stdout }}/{{ install_executable }}"
 
 - name: create inventory directory for oracle universal installer
   file:
@@ -31,22 +37,14 @@
   sudo_user: root
 
 - name: Install Tools and Frameworks
-  command: "{{ tmpdir }}/{{ toolsandframeworks_install }}/silent_install.sh {{ tmpdir }}/{{ toolsandframeworks_install }}/silent_response.rsp ToolsAndFrameworks {{ endeca_root }}/ToolsAndFrameworks {{ endeca_admin_password }}"
+  command: "{{ mktemp.stdout }}/{{ install_executable }}/silent_install.sh {{ mktemp.stdout }}/{{ install_executable }}/silent_response.rsp ToolsAndFrameworks {{ install_root }}/ToolsAndFrameworks {{ endeca_admin_password }}"
   args:
-    creates: "{{ endeca_root }}/ToolsAndFrameworks"
-
-- name: ensure pid gets created in correct place
-  lineinfile: 
-    create=yes
-    mode=0755
-    dest={{ endeca_root }}/ToolsAndFrameworks/{{ endeca_toolsandframeworks_version }}/server/apache-tomcat-7.0.42/bin/setenv.sh
-    regexp="CATALINA_PID=.*"
-    line="CATALINA_PID={{ pid_dir }}/{{ endeca_toolsandframeworks_service }}.pid"
+    creates: "{{ install_root }}/ToolsAndFrameworks"
 
 # Disabling for now. Appears to allow login via the sso server but breaks back-end things like initialize-services. Need to figure out why.
 #- name: setup for sso
 #  lineinfile:
-#    dest="{{ endeca_root }}/ToolsAndFrameworks/{{ endeca_toolsandframeworks_version }}/server/workspace/conf/webstudio.properties"
+#    dest="{{ install_root }}/ToolsAndFrameworks/{{ endeca_toolsandframeworks_version }}/server/workspace/conf/webstudio.properties"
 #    regexp="{{ item.name }}="
 #    insertafter="Commerce SSO Authentication"
 #    line="{{ item.name }}={{ item.value }}"
@@ -61,15 +59,9 @@
 
 # /app/oracle/product/endeca/ToolsAndFrameworks/11.1.0/credential_store/bin/manage_credentials.sh add --key ifcr --user admin --type password
 
-- name: create endecatools init script
-  template: 
-    src="toolsandframeworks_init.j2" 
-    dest="/etc/init.d/{{ endeca_toolsandframeworks_service }}" 
-    mode=0755
-  sudo: yes
-  sudo_user: root
+- include: init.yml tags=configure_service sudo_user=root
 
-- name: start service
-  service: name={{ endeca_toolsandframeworks_service }} enabled=yes state=started
-  sudo: yes
-  sudo_user: root
+#- name: clean up temporary directory
+#  file: 
+#    state=absent 
+#    path="{{ mktemp.stdout }}"
